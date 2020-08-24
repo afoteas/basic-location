@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".MainActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:theme="@style/AppTheme.AppBarOverlay" android:id="@+id/appBarLayout">
+
+        <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorPrimary"
+                app:popupTheme="@style/AppTheme.PopupOverlay"/>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <include layout="@layout/content_main" android:id="@+id/include" android:layout_width="match_parent"
+             android:layout_height="match_parent"/>
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="@dimen/fab_margin"
+            app:srcCompat="@android:drawable/ic_menu_myplaces" app:backgroundTint="#F44336" app:fabSize="normal"
+            app:fabCustomSize="60dp" app:maxImageSize="40dp"/>
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+        <TextView
+                android:text="x_coordinates"
+                android:layout_width="120dp"
+                android:layout_height="30dp" android:id="@+id/x_coordinates"
+                android:padding="5dip"
+                app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginBottom="32dp"
+                android:layout_marginRight="100dp" android:layout_marginEnd="100dp" android:background="@drawable/box"
+                android:textColor="#E1FFFFFF" android:gravity="center"/>
+        <TextView
+                android:text="y_coordinates"
+                android:layout_width="120dp"
+                android:layout_height="30dp" android:id="@+id/y_coordinates"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toStartOf="@+id/x_coordinates"
+                android:layout_marginBottom="32dp" android:layout_marginRight="24dp" android:layout_marginEnd="24dp"
+                android:background="@drawable/box" android:textColor="#E1FFFFFF" android:flow_verticalAlign="top"
+                android:gravity="center"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
