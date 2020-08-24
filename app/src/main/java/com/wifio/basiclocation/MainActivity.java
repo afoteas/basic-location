@@ -1,5 +1,6 @@
 package com.wifio.basiclocation;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
 import android.widget.TextView;
@@ -14,15 +15,16 @@ import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static Context context;
+    private Context context;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        MainActivity.context = getApplicationContext();
+        context = getApplicationContext();
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         NewZoomableImageView touch = findViewById(R.id.zoom_image);
+
         touch.setImageResource(R.drawable.katan);
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -50,10 +52,7 @@ public class MainActivity extends AppCompatActivity {
                 toast.show();
             }
         });
-    }
-
-    public static Context getAppContext() {
-        return context;
+        touch.setCoordinates(xCoordinate, yCoordinate);
     }
 
     @Override

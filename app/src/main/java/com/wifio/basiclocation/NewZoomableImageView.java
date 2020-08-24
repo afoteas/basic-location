@@ -1,17 +1,21 @@
 package com.wifio.basiclocation;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.widget.AppCompatImageView;
 
 public class NewZoomableImageView extends AppCompatImageView {
+    private static final String TAG = "NewZoomableImageView";
     private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
 
         @Override
@@ -22,7 +26,7 @@ public class NewZoomableImageView extends AppCompatImageView {
 
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
-            Toast toast = Toast.makeText(MainActivity.getAppContext(),
+            Toast toast = Toast.makeText(context,
                     "OnScale Toast",
                     Toast.LENGTH_SHORT);
 
@@ -56,6 +60,9 @@ public class NewZoomableImageView extends AppCompatImageView {
     static final int CLICK = 3;
 
     private int mode = NONE;
+    private Context context;
+    private TextView yCoordinate;
+    private TextView xCoordinate;
 
     private Matrix matrix = new Matrix();
 
@@ -87,11 +94,18 @@ public class NewZoomableImageView extends AppCompatImageView {
     }
 
     private void init(Context context) {
+
         super.setClickable(true);
+        this.context = context;
         mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
         m = new float[9];
         setImageMatrix(matrix);
         setScaleType(ImageView.ScaleType.MATRIX);
+    }
+
+    public void setCoordinates(TextView xCoordinate, TextView yCoordinate){
+        this.yCoordinate = yCoordinate;
+        this.xCoordinate = xCoordinate;
     }
 
     @Override
@@ -100,6 +114,7 @@ public class NewZoomableImageView extends AppCompatImageView {
         int bmHeight = getBmHeight();
         int bmWidth = getBmWidth();
 
+        Log.i(TAG, "bmHeight: " + bmHeight + ", bmWidth:" + bmWidth);
         float width = getMeasuredWidth();
         float height = getMeasuredHeight();
         //Fit to screen.
@@ -120,6 +135,7 @@ public class NewZoomableImageView extends AppCompatImageView {
         setImageMatrix(matrix);
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 
@@ -134,13 +150,31 @@ public class NewZoomableImageView extends AppCompatImageView {
             //when one finger is touching
             //set the mode to DRAG
             case MotionEvent.ACTION_DOWN:
-                Toast toast = Toast.makeText(MainActivity.getAppContext(),
-                        "onTouchEvent Toast",
+                String text = "X: " + event.getX() + ", Y:" + event.getY();
+                Toast toast = Toast.makeText(context,
+                        text,
                         Toast.LENGTH_SHORT);
-
                 toast.show();
+                xCoordinate.setText("x: " + (int) event.getX());
+                yCoordinate.setText("y: " + (int) event.getY());
+                Log.i(TAG, "X_matrix: " + x + ", Y_matrix:" + y);
+                Log.i(TAG,"saveScale: " + saveScale);
+                Log.i(TAG, "Bm Width: "+ originalBitmapWidth*saveScale);
+                Log.i(TAG, "Bm Height: "+ originalBitmapHeight*saveScale);
+                float xPos = event.getX() - x;
+                float yPos = event.getY() - y;
+                if (xPos >= 0 && yPos >= 0 && xPos < originalBitmapWidth*saveScale
+                        && yPos <  originalBitmapHeight*saveScale) {
+                    xCoordinate.setText("x: " + xPos/originalBitmapWidth/saveScale);
+                    yCoordinate.setText("y: " + yPos/originalBitmapHeight/saveScale);
+                } else {
+                    xCoordinate.setText("null");
+                    yCoordinate.setText("null");
+                }
+//                Log.i(TAG, "X: " + event.getX() + ", Y:" + event.getY());
                 last.set(event.getX(), event.getY());
                 start.set(last);
+                Log.i(TAG, "start: " + start + ",last: " + last);
                 mode = DRAG;
                 break;
             //when two fingers are touching
