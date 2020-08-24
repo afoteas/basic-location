@@ -21,8 +21,13 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <include layout="@layout/content_main" android:id="@+id/include" android:layout_width="match_parent"
-             android:layout_height="match_parent"/>
+<!--    <include layout="@layout/content_main" android:id="@+id/include" android:layout_width="match_parent"-->
+<!--             android:layout_height="match_parent"/>-->
+
+    <com.wifio.basiclocation.NewZoomableImageView
+            android:id="@+id/zoom_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
     <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab"
             android:layout_width="wrap_content"
@@ -31,28 +36,31 @@
             android:layout_margin="@dimen/fab_margin"
             app:srcCompat="@android:drawable/ic_menu_myplaces" app:backgroundTint="#F44336" app:fabSize="normal"
             app:fabCustomSize="60dp" app:maxImageSize="40dp"/>
+
     <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
         <TextView
-                android:text="x_coordinates"
-                android:layout_width="120dp"
-                android:layout_height="30dp" android:id="@+id/x_coordinates"
-                android:padding="5dip"
-                app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent"
-                android:layout_marginBottom="32dp"
-                android:layout_marginRight="100dp" android:layout_marginEnd="100dp" android:background="@drawable/box"
-                android:textColor="#E1FFFFFF" android:gravity="center"/>
-        <TextView
                 android:text="y_coordinates"
                 android:layout_width="120dp"
                 android:layout_height="30dp" android:id="@+id/y_coordinates"
+                android:padding="5dip"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toStartOf="@+id/x_coordinates"
-                android:layout_marginBottom="32dp" android:layout_marginRight="24dp" android:layout_marginEnd="24dp"
-                android:background="@drawable/box" android:textColor="#E1FFFFFF" android:flow_verticalAlign="top"
-                android:gravity="center"/>
+                android:layout_marginBottom="32dp"
+                android:background="@drawable/box"
+                android:textColor="#E1FFFFFF" android:gravity="center"
+                app:layout_constraintStart_toEndOf="@+id/x_coordinates" android:layout_marginLeft="24dp"
+                android:layout_marginStart="24dp"/>
+        <TextView
+                android:text="x_coordinates"
+                android:layout_width="120dp"
+                android:layout_height="30dp" android:id="@+id/x_coordinates"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                android:layout_marginBottom="32dp"
+                android:background="@drawable/box" android:textColor="#E1FFFFFF"
+                android:gravity="center" android:layout_marginLeft="24dp" android:layout_marginStart="24dp"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

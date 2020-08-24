@@ -1,6 +1,9 @@
 package com.wifio.basiclocation;
 
+import android.content.Context;
 import android.os.Bundle;
+import android.widget.TextView;
+import android.widget.Toast;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -11,13 +14,16 @@ import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static Context context;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        MainActivity.context = getApplicationContext();
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
+        NewZoomableImageView touch = findViewById(R.id.zoom_image);
+        touch.setImageResource(R.drawable.katan);
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -26,6 +32,28 @@ public class MainActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
+        final TextView yCoordinate = findViewById(R.id.y_coordinates);
+        yCoordinate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                yCoordinate.setText("pressed");
+            }
+        });
+        final TextView xCoordinate = findViewById(R.id.x_coordinates);
+        xCoordinate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Toast toast = Toast.makeText(context,
+                        "This is a message displayed in a Toast",
+                        Toast.LENGTH_SHORT);
+
+                toast.show();
+            }
+        });
+    }
+
+    public static Context getAppContext() {
+        return context;
     }
 
     @Override
