@@ -10,8 +10,8 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.appcompat.widget.AppCompatImageView;
 
 public class NewZoomableImageView extends AppCompatImageView {
@@ -26,11 +26,6 @@ public class NewZoomableImageView extends AppCompatImageView {
 
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
-            Toast toast = Toast.makeText(context,
-                    "OnScale Toast",
-                    Toast.LENGTH_SHORT);
-
-            toast.show();
             float scaleFactor = detector.getScaleFactor();
             float newScale = saveScale * scaleFactor;
             if (newScale < maxScale && newScale > minScale) {
@@ -63,6 +58,7 @@ public class NewZoomableImageView extends AppCompatImageView {
     private Context context;
     private TextView yCoordinate;
     private TextView xCoordinate;
+    private MainActivity.CustomView linearLayout;
 
     private Matrix matrix = new Matrix();
 
@@ -108,6 +104,10 @@ public class NewZoomableImageView extends AppCompatImageView {
         this.xCoordinate = xCoordinate;
     }
 
+    public void setPointer(MainActivity.CustomView layout) {
+        this.linearLayout = layout;
+    }
+
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
@@ -150,13 +150,6 @@ public class NewZoomableImageView extends AppCompatImageView {
             //when one finger is touching
             //set the mode to DRAG
             case MotionEvent.ACTION_DOWN:
-                String text = "X: " + event.getX() + ", Y:" + event.getY();
-                Toast toast = Toast.makeText(context,
-                        text,
-                        Toast.LENGTH_SHORT);
-                toast.show();
-                xCoordinate.setText("x: " + (int) event.getX());
-                yCoordinate.setText("y: " + (int) event.getY());
                 Log.i(TAG, "X_matrix: " + x + ", Y_matrix:" + y);
                 Log.i(TAG,"saveScale: " + saveScale);
                 Log.i(TAG, "Bm Width: "+ originalBitmapWidth*saveScale);
@@ -165,13 +158,16 @@ public class NewZoomableImageView extends AppCompatImageView {
                 float yPos = event.getY() - y;
                 if (xPos >= 0 && yPos >= 0 && xPos < originalBitmapWidth*saveScale
                         && yPos <  originalBitmapHeight*saveScale) {
+                    linearLayout.setVisibility(LinearLayout.VISIBLE);
                     xCoordinate.setText("x: " + xPos/originalBitmapWidth/saveScale);
                     yCoordinate.setText("y: " + yPos/originalBitmapHeight/saveScale);
                 } else {
                     xCoordinate.setText("null");
                     yCoordinate.setText("null");
+                    linearLayout.clearCanvas();
+
                 }
-//                Log.i(TAG, "X: " + event.getX() + ", Y:" + event.getY());
+                Log.i(TAG, "X: " + event.getX() + ", Y:" + event.getY());
                 last.set(event.getX(), event.getY());
                 start.set(last);
                 Log.i(TAG, "start: " + start + ",last: " + last);
@@ -180,6 +176,9 @@ public class NewZoomableImageView extends AppCompatImageView {
             //when two fingers are touching
             //set the mode to ZOOM
             case MotionEvent.ACTION_POINTER_DOWN:
+                linearLayout.clearCanvas();
+                xCoordinate.setText("null");
+                yCoordinate.setText("null");
                 last.set(event.getX(), event.getY());
                 start.set(last);
                 mode = ZOOM;
@@ -189,6 +188,11 @@ public class NewZoomableImageView extends AppCompatImageView {
             case MotionEvent.ACTION_MOVE:
                 //if the mode is ZOOM or
                 //if the mode is DRAG and already zoomed
+                if (mode == ZOOM) {
+                    linearLayout.clearCanvas();
+                    xCoordinate.setText("null");
+                    yCoordinate.setText("null");
+                }
                 if (mode == ZOOM || (mode == DRAG && saveScale > minScale)) {
                     float deltaX = curr.x - last.x;// x difference
                     float deltaY = curr.y - last.y;// y difference
@@ -250,8 +254,15 @@ public class NewZoomableImageView extends AppCompatImageView {
                 mode = NONE;
                 int xDiff = (int) Math.abs(curr.x - start.x);
                 int yDiff = (int) Math.abs(curr.y - start.y);
-                if (xDiff < CLICK && yDiff < CLICK)
-                    performClick();
+                if (xDiff < CLICK && yDiff < CLICK) {
+                    performClick();}
+                else {
+                    linearLayout.clearCanvas();
+//                    linearLayout.setVisibility(LinearLayout.GONE);
+                    xCoordinate.setText("null");
+                    yCoordinate.setText("null");
+                }
+
                 break;
             // second finger is lifted
             case MotionEvent.ACTION_POINTER_UP:
