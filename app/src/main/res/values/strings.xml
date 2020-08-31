@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Indoor Location</string>
-    <string name="action_settings">Settings</string>
+    <string name="clear_previous">Clear Previous</string>
+    <string name="show_previous">Show Previous</string>
     <string name="test_image">test Image</string>
 </resources>

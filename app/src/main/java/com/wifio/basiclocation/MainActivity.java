@@ -1,18 +1,13 @@
 package com.wifio.basiclocation;
 
-import android.content.Context;
-import android.content.res.Resources;
+import android.content.*;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.*;
 import android.widget.LinearLayout;
-import android.widget.TextView;
-import android.widget.Toast;
-import com.android.volley.*;
-import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -21,122 +16,119 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
-    final String url = "http://myurl.xyz:5000";
+    public BroadcastReceiver receiver;
+    final String url = "http://172.28.40.9:5000/fingerprint";
     LinearLayout layout;
-    float x = 0;
-    float y = 0;
     String macAddr;
-    private Context context;
+    Context context;
+    private Map<String, Float> coordinates = new HashMap<>();
+    private SharedPreferences mPrefs;
+    private IndoorBuildingView touch;
+    private JSONArray previousMeasurements;
+    private boolean showPrevious = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
         setContentView(R.layout.activity_main);
-        layout=findViewById(R.id.layout);
-        CustomView customView = new CustomView(MainActivity.this);
-        layout.addView(customView);
+        layout = findViewById(R.id.layout);
+        mPrefs  = getSharedPreferences("wifio_location", 0);
+        previousMeasurements = new JSONArray();
+        //test init
+
+        try {
+            JSONObject tempMeas = new JSONObject();
+            tempMeas.put("x", 0.3);
+            tempMeas.put("y", 0.8);
+            previousMeasurements.put(tempMeas);
+            tempMeas = new JSONObject();
+            tempMeas.put("x", 0.8);
+            tempMeas.put("y", 0.4);
+            previousMeasurements.put(tempMeas);
+            tempMeas = new JSONObject();
+            tempMeas.put("x", 0.1);
+            tempMeas.put("y", 0.8);
+            previousMeasurements.put(tempMeas);
+            tempMeas = new JSONObject();
+            tempMeas.put("x", 0.5);
+            tempMeas.put("y", 0.5);
+            previousMeasurements.put(tempMeas);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        ///////
+
+        String meas = mPrefs.getString("meas", previousMeasurements.toString());
+        try {
+            previousMeasurements =  new JSONArray(meas);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        PointerView pointerView = new PointerView(MainActivity.this);
+        layout.addView(pointerView);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        NewZoomableImageView touch = findViewById(R.id.zoom_image);
+        touch = findViewById(R.id.zoom_image);
 
         touch.setImageResource(R.drawable.katan);
-        final TextView yCoordinate = findViewById(R.id.y_coordinates);
-        final TextView xCoordinate = findViewById(R.id.x_coordinates);
-        xCoordinate.setVisibility(View.GONE);
-        yCoordinate.setVisibility(View.GONE);
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (xCoordinate.getText() != "null" && yCoordinate.getText() != "null") {
-                    final float x = Float.parseFloat((String) xCoordinate.getText().subSequence(3,xCoordinate.getText().length()));
-                    final float y = Float.parseFloat((String) yCoordinate.getText().subSequence(3,yCoordinate.getText().length()));
-                    Snackbar.make(view, "x: " + x + " y: " + y, Snackbar.LENGTH_LONG)
+                if (coordinates.get("x") != null && coordinates.get("y") != null) {
+                    Snackbar.make(view, "x: " +coordinates.get("x") + " y: " + coordinates.get("y"),
+                            Snackbar.LENGTH_LONG)
                             .setAction("Send", new View.OnClickListener() {
                                 @Override
                                 public void onClick(View view) {
-                                    poster(x, y);
+                                    Utils.postMeasurement(coordinates.get("x"), coordinates.get("y"),
+                                            context, macAddr, previousMeasurements, mPrefs, url);
                                 }
                             }).show();
                 }
             }
         });
-        touch.setCoordinates(xCoordinate, yCoordinate);
-        touch.setPointer(customView);
+        touch.setCoordinates(coordinates);
+        touch.setPointer(pointerView);
         macAddr = Utils.getMACAddress("wlan0");
 
         Log.i(TAG, "mac: " + macAddr);
         this.setTitle("mac: " + macAddr);
+
+        receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent.getAction() != null) {
+                    switch (intent.getAction()) {
+                        case "MEASUREMENT_SAVED": {
+                            if(showPrevious){
+                                Bitmap bitmap = drawPrevious();
+                                touch.setImageBitmap(bitmap);
+                            }
+                            Log.i(TAG, "measurement_saved");
+                            break;
+                        }
+                        case "EXCEPTION": {
+                            Log.i(TAG, "timeout");
+                            break;
+                        }
+                    }
+                }
+            }
+        };
+        IntentFilter receiverFilter = new IntentFilter();
+        receiverFilter.addAction("MEASUREMENT_SAVED");
+        receiverFilter.addAction("EXCEPTION");
+        LocalBroadcastManager.getInstance(this).registerReceiver((receiver),receiverFilter);
     }
 
-    public void poster(final float x, final float y){
-        RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
-        try {
-            JSONObject object = new JSONObject();
-            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, url, null, new Response.Listener<JSONObject>() {
-                @Override
-                public void onResponse(JSONObject response) {
-                    try {
-                        JSONArray array = response.getJSONArray("items");
-//                        itemsData.clear();
-//                        for(int i = 0 ; i < array.length() ; i++){
-//                            itemsData.add(new itemObject(array.getJSONObject(i).getString("name"),
-//                                    array.getJSONObject(i).getBoolean("checked")));
-//                        }
-//                        itemsAdapter.notifyDataSetChanged();
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
 
-                }
-            }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    Toast.makeText(getApplicationContext(), "Error: " + error, Toast.LENGTH_LONG).show();
-                }
-            }){
-                @Override
-                public String getBodyContentType() {
-                    return "application/json; charset=utf-8";
-                }
-                @Override
-                public byte[] getBody() {
-                    JSONObject jsonBody = new JSONObject();
-                    try {
-                        jsonBody.put("x", x);
-                        jsonBody.put("y", y);
-                        jsonBody.put("mac", macAddr);
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                    final String requestBody = jsonBody.toString();
-                    try {
-                        return requestBody == null ? null : requestBody.getBytes("utf-8");
-                    } catch (UnsupportedEncodingException uee) {
-                        VolleyLog.wtf("Unsupported Encoding while trying to get the bytes of %s using %s", requestBody, "utf-8");
-                        return null;
-                    }
-                }
-                @Override
-                public Map<String, String> getHeaders() throws AuthFailureError {
-                    Map<String,String> params = new HashMap<String, String>();
-                    params.put("Content-Type","application/json");
-                    return params;
-                }
-            };
-            requestQueue.add(jsonObjectRequest);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -153,67 +145,55 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.show_previous) {
+            if(item.getTitle().equals("Show Previous")) {
+                showPrevious = true;
+                item.setTitle("Hide Previous");
+                Bitmap bitmap = drawPrevious();
+                touch.setImageBitmap(bitmap);
+            } else {
+                showPrevious = false;
+                item.setTitle("Show Previous");
+                touch.setImageResource(R.drawable.katan);
+            }
+
+            return true;
+        }
+        if (id == R.id.clear_previous) {
+            previousMeasurements = new JSONArray();
+            SharedPreferences.Editor mEditor = mPrefs.edit();
+            mEditor.putString("meas", previousMeasurements.toString()).commit();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
 
-    public class CustomView extends View {
+    private Bitmap drawPrevious() {
+        Drawable drawable = getDrawable(R.drawable.katan);
+        Paint paint = new Paint();
+        paint.setAntiAlias(true);
+        paint.setColor(getColor(R.color.transparentColor));
+        paint.setStyle(Paint.Style.FILL);
+        Canvas canvas = new Canvas();
+        Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+        canvas.setBitmap(bitmap);
+//        canvas.drawCircle(20, 20, 40, paint);
+        drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
+        drawable.draw(canvas);
+        for(int i = 0; i <previousMeasurements.length(); i++) {
+            try {
+                JSONObject tempMeas = previousMeasurements.getJSONObject(i);
+                Log.i(TAG, "pos: " + tempMeas.toString());
+                double x = tempMeas.getDouble("x");
+                double y = tempMeas.getDouble("y");
+                canvas.drawCircle((float)x*canvas.getWidth(), (float)y*canvas.getHeight(), 10, paint);
 
-        Bitmap mBitmap;
-        Paint paint;
-        Canvas canvas;
-        public CustomView(Context context) {
-            super(context);
-//            mBitmap = Bitmap.createBitmap(400, 800, Bitmap.Config.ARGB_8888);
-            paint = new Paint();
-            paint.setColor(Color.RED);
-            paint.setStyle(Paint.Style.FILL);
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            this.canvas = canvas;
-            if(x!=0 && y!=0) {
-//                canvas.drawCircle(x, y, 40, paint);
-                Resources res = getResources();
-                Bitmap bitmap = getBitmap(R.drawable.ic_location);
-                canvas.drawBitmap(bitmap, (int) x - 100, (int) y - 150 , paint);
-//                Drawable d = getResources().getDrawable(R.drawable.ic_location);
-//                d.setBounds((int)x-20, (int)y+20, (int)x+20, (int)y-20);
-//                d.draw(canvas);
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         }
 
-        private Bitmap getBitmap(int drawableRes) {
-            Drawable drawable = getResources().getDrawable(drawableRes);
-            Canvas canvas = new Canvas();
-            Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-            canvas.setBitmap(bitmap);
-            drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
-            drawable.draw(canvas);
-
-            return bitmap;
-        }
-
-        public void clearCanvas(){
-            invalidate();
-            x=0;
-            y=0;
-        }
-
-        public boolean onTouchEvent(MotionEvent event) {
-            if (event.getAction() == MotionEvent.ACTION_DOWN) {
-//                invalidate();
-                x = event.getX();
-                y = event.getY();
-                invalidate();
-            }
-            return false;
-        }
-
+        return bitmap;
     }
 }

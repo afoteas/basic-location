@@ -2,8 +2,12 @@
       xmlns:app="http://schemas.android.com/apk/res-auto"
       xmlns:tools="http://schemas.android.com/tools"
       tools:context="com.wifio.basiclocation.MainActivity">
-    <item android:id="@+id/action_settings"
-          android:title="@string/action_settings"
+    <item android:id="@+id/show_previous"
+          android:title="@string/show_previous"
+          android:orderInCategory="100"
+          app:showAsAction="never"/>
+    <item android:id="@+id/clear_previous"
+          android:title="@string/clear_previous"
           android:orderInCategory="100"
           app:showAsAction="never"/>
 </menu>

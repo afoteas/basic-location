@@ -14,7 +14,10 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.appcompat.widget.AppCompatImageView;
 
-public class NewZoomableImageView extends AppCompatImageView {
+import java.util.HashMap;
+import java.util.Map;
+
+public class IndoorBuildingView extends AppCompatImageView {
     private static final String TAG = "NewZoomableImageView";
     private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
 
@@ -55,17 +58,15 @@ public class NewZoomableImageView extends AppCompatImageView {
     static final int CLICK = 3;
 
     private int mode = NONE;
-    private Context context;
-    private TextView yCoordinate;
-    private TextView xCoordinate;
-    private MainActivity.CustomView linearLayout;
+    private Map<String, Float> coordinates;
+    private PointerView linearLayout;
 
     private Matrix matrix = new Matrix();
 
     private PointF last = new PointF();
     private PointF start = new PointF();
-    private float minScale = 0.5f;
-    private float maxScale = 4f;
+    private final float minScale = 0.5f;
+    private final float maxScale = 4f;
     private float[] m;
 
     private float redundantXSpace, redundantYSpace;
@@ -74,17 +75,17 @@ public class NewZoomableImageView extends AppCompatImageView {
 
     private ScaleGestureDetector mScaleDetector;
 
-    public NewZoomableImageView(Context context) {
+    public IndoorBuildingView(Context context) {
         super(context);
         init(context);
     }
 
-    public NewZoomableImageView(Context context, AttributeSet attrs) {
+    public IndoorBuildingView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init(context);
     }
 
-    public NewZoomableImageView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public IndoorBuildingView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init(context);
     }
@@ -92,19 +93,17 @@ public class NewZoomableImageView extends AppCompatImageView {
     private void init(Context context) {
 
         super.setClickable(true);
-        this.context = context;
         mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
         m = new float[9];
         setImageMatrix(matrix);
         setScaleType(ImageView.ScaleType.MATRIX);
     }
 
-    public void setCoordinates(TextView xCoordinate, TextView yCoordinate){
-        this.yCoordinate = yCoordinate;
-        this.xCoordinate = xCoordinate;
+    public void setCoordinates(Map<String, Float> coordinates){
+        this.coordinates = coordinates;
     }
 
-    public void setPointer(MainActivity.CustomView layout) {
+    public void setPointer(PointerView layout) {
         this.linearLayout = layout;
     }
 
@@ -156,18 +155,23 @@ public class NewZoomableImageView extends AppCompatImageView {
                 Log.i(TAG, "Bm Height: "+ originalBitmapHeight*saveScale);
                 float xPos = event.getX() - x;
                 float yPos = event.getY() - y;
+                String xCoor;
+                String yCoor;
                 if (xPos >= 0 && yPos >= 0 && xPos < originalBitmapWidth*saveScale
                         && yPos <  originalBitmapHeight*saveScale) {
                     linearLayout.setVisibility(LinearLayout.VISIBLE);
-                    xCoordinate.setText("x: " + xPos/originalBitmapWidth/saveScale);
-                    yCoordinate.setText("y: " + yPos/originalBitmapHeight/saveScale);
+                    xCoor = "x: " + xPos/originalBitmapWidth/saveScale;
+                    yCoor = "y: " + yPos/originalBitmapHeight/saveScale;
+                    coordinates.put("x", xPos/originalBitmapWidth/saveScale);
+                    coordinates.put("y", yPos/originalBitmapHeight/saveScale);
+
                 } else {
-                    xCoordinate.setText("null");
-                    yCoordinate.setText("null");
+                    coordinates.clear();
                     linearLayout.clearCanvas();
 
                 }
                 Log.i(TAG, "X: " + event.getX() + ", Y:" + event.getY());
+//                Log.i(TAG, "xCoordinate: " + xCoordinate + ", yCoordinate:" + yCoordinate);
                 last.set(event.getX(), event.getY());
                 start.set(last);
                 Log.i(TAG, "start: " + start + ",last: " + last);
@@ -177,8 +181,7 @@ public class NewZoomableImageView extends AppCompatImageView {
             //set the mode to ZOOM
             case MotionEvent.ACTION_POINTER_DOWN:
                 linearLayout.clearCanvas();
-                xCoordinate.setText("null");
-                yCoordinate.setText("null");
+                coordinates.clear();
                 last.set(event.getX(), event.getY());
                 start.set(last);
                 mode = ZOOM;
@@ -190,8 +193,7 @@ public class NewZoomableImageView extends AppCompatImageView {
                 //if the mode is DRAG and already zoomed
                 if (mode == ZOOM) {
                     linearLayout.clearCanvas();
-                    xCoordinate.setText("null");
-                    yCoordinate.setText("null");
+                    coordinates.clear();
                 }
                 if (mode == ZOOM || (mode == DRAG && saveScale > minScale)) {
                     float deltaX = curr.x - last.x;// x difference
@@ -258,9 +260,7 @@ public class NewZoomableImageView extends AppCompatImageView {
                     performClick();}
                 else {
                     linearLayout.clearCanvas();
-//                    linearLayout.setVisibility(LinearLayout.GONE);
-                    xCoordinate.setText("null");
-                    yCoordinate.setText("null");
+                    coordinates.clear();
                 }
 
                 break;
@@ -274,9 +274,6 @@ public class NewZoomableImageView extends AppCompatImageView {
         return true;
     }
 
-    public void setMaxZoom(float x) {
-        maxScale = x;
-    }
 
     private int getBmWidth() {
         Drawable drawable = getDrawable();

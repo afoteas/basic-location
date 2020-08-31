@@ -1,65 +1,23 @@
 package com.wifio.basiclocation;
 
-import java.io.*;
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.widget.Toast;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import com.android.volley.*;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.util.*;
-//import org.apache.http.conn.util.InetAddressUtils;
 
 public class Utils {
-
-    /**
-     * Convert byte array to hex string
-     * @param bytes toConvert
-     * @return hexValue
-     */
-    public static String bytesToHex(byte[] bytes) {
-        StringBuilder sbuf = new StringBuilder();
-        for(int idx=0; idx < bytes.length; idx++) {
-            int intVal = bytes[idx] & 0xff;
-            if (intVal < 0x10) sbuf.append("0");
-            sbuf.append(Integer.toHexString(intVal).toUpperCase());
-        }
-        return sbuf.toString();
-    }
-
-    /**
-     * Get utf8 byte array.
-     * @param str which to be converted
-     * @return  array of NULL if error was found
-     */
-    public static byte[] getUTF8Bytes(String str) {
-        try { return str.getBytes("UTF-8"); } catch (Exception ex) { return null; }
-    }
-
-    /**
-     * Load UTF8withBOM or any ansi text file.
-     * @param filename which to be converted to string
-     * @return String value of File
-     * @throws java.io.IOException if error occurs
-     */
-    public static String loadFileAsString(String filename) throws java.io.IOException {
-        final int BUFLEN=1024;
-        BufferedInputStream is = new BufferedInputStream(new FileInputStream(filename), BUFLEN);
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream(BUFLEN);
-            byte[] bytes = new byte[BUFLEN];
-            boolean isUTF8=false;
-            int read,count=0;
-            while((read=is.read(bytes)) != -1) {
-                if (count==0 && bytes[0]==(byte)0xEF && bytes[1]==(byte)0xBB && bytes[2]==(byte)0xBF ) {
-                    isUTF8=true;
-                    baos.write(bytes, 3, read-3); // drop UTF8 bom marker
-                } else {
-                    baos.write(bytes, 0, read);
-                }
-                count+=read;
-            }
-            return isUTF8 ? new String(baos.toByteArray(), "UTF-8") : new String(baos.toByteArray());
-        } finally {
-            try{ is.close(); } catch(Exception ignored){}
-        }
-    }
-
     /**
      * Returns MAC address of the given interface name.
      * @param interfaceName eth0, wlan0 or NULL=use first interface
@@ -89,36 +47,81 @@ public class Utils {
         }*/
     }
 
-    /**
-     * Get IP address from first non-localhost interface
-     * @param useIPv4   true=return ipv4, false=return ipv6
-     * @return  address or empty string
-     */
-    public static String getIPAddress(boolean useIPv4) {
-        try {
-            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
-            for (NetworkInterface intf : interfaces) {
-                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
-                for (InetAddress addr : addrs) {
-                    if (!addr.isLoopbackAddress()) {
-                        String sAddr = addr.getHostAddress();
-                        //boolean isIPv4 = InetAddressUtils.isIPv4Address(sAddr);
-                        boolean isIPv4 = sAddr.indexOf(':')<0;
 
-                        if (useIPv4) {
-                            if (isIPv4)
-                                return sAddr;
-                        } else {
-                            if (!isIPv4) {
-                                int delim = sAddr.indexOf('%'); // drop ip6 zone suffix
-                                return delim<0 ? sAddr.toUpperCase() : sAddr.substring(0, delim).toUpperCase();
-                            }
-                        }
+    public static void postMeasurement(final float x, final float y, final Context context, final String macAddr,
+                                       final JSONArray previousMeasurements,
+                                       final SharedPreferences mPrefs, String url) {
+        RequestQueue requestQueue = Volley.newRequestQueue(context);
+        try {
+            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, url,
+                    null, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    try {
+                        if (response.getString("status").equals("ok")) {
+                            JSONObject tempMeas = new JSONObject();
+                            tempMeas.put("x", x);
+                            tempMeas.put("y", y);
+                            previousMeasurements.put(tempMeas);
+                            SharedPreferences.Editor mEditor = mPrefs.edit();
+                            mEditor.putString("meas", previousMeasurements.toString()).apply();
+                            LocalBroadcastManager.getInstance(context).sendBroadcast(
+                                    new Intent("MEASUREMENT_SAVED"));
+                        };
+                    } catch (JSONException e) {
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(
+                                new Intent("EXCEPTION"));
+                        e.printStackTrace();
+                    }
+
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Toast.makeText(context, "Error: " + error, Toast.LENGTH_LONG).show();
+
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(
+                            new Intent("EXCEPTION"));
+                }
+            }){
+                @Override
+                public String getBodyContentType() {
+                    return "application/json; charset=utf-8";
+                }
+                @Override
+                public byte[] getBody() {
+                    JSONObject jsonBody = new JSONObject();
+                    try {
+                        jsonBody.put("x", x);
+                        jsonBody.put("y", y);
+                        jsonBody.put("mac", macAddr);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    final String requestBody = jsonBody.toString();
+                    try {
+                        return requestBody == null ? null : requestBody.getBytes("utf-8");
+                    } catch (UnsupportedEncodingException uee) {
+                        VolleyLog.wtf("Unsupported Encoding while trying to get the bytes of %s using %s", requestBody, "utf-8");
+                        return null;
                     }
                 }
-            }
-        } catch (Exception ignored) { } // for now eat exceptions
-        return "";
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
+                    Map<String,String> params = new HashMap<String, String>();
+                    params.put("Content-Type","application/json");
+                    return params;
+                }
+            };
+            jsonObjectRequest.setRetryPolicy(new DefaultRetryPolicy(
+                    1000,
+                    DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                    DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+            requestQueue.add(jsonObjectRequest);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
 }
