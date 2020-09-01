@@ -3,6 +3,7 @@ package com.wifio.basiclocation;
 import android.content.*;
 import android.graphics.*;
 import android.graphics.drawable.Drawable;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.*;
@@ -26,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
     LinearLayout layout;
     String macAddr;
     Context context;
-    private Map<String, Float> coordinates = new HashMap<>();
+    private final Map<String, Float> coordinates = new HashMap<>();
     private SharedPreferences mPrefs;
     private IndoorBuildingView touch;
     private JSONArray previousMeasurements;
@@ -82,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 if (coordinates.get("x") != null && coordinates.get("y") != null) {
+                    ((WifiManager) getSystemService(WIFI_SERVICE)).startScan();
                     Snackbar.make(view, "x: " +coordinates.get("x") + " y: " + coordinates.get("y"),
                             Snackbar.LENGTH_LONG)
                             .setAction("Send", new View.OnClickListener() {
